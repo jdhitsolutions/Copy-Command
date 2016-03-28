@@ -44,8 +44,8 @@ PS C:\> Copy-Command Get-ADComputer Get-MyADComputer -includedynamic
 Create a wrapper function for Get-ADComputer called Get-MyADComputer. Due to the way the Active Directory cmdlets are written, most parameters appear to be dynamic so you need to include dynamic parameters otherwise there will be no parameters in the final function.
 
 .Notes
-Last Updated: November 25, 2015
-Version     : 1.0
+Last Updated: March 28, 2016
+Version     : 1.0.1
 
 Learn more about PowerShell:
 http://jdhitsolutions.com/blog/essential-powershell-resources/
@@ -78,8 +78,10 @@ Param(
 [switch]$UseForwardHelp
 )
 
+
 Try {
-    Write-Verbose "Getting command metadata for $command"
+    Write-Verbose "[BEGIN  ] Starting: $($MyInvocation.Mycommand)"
+    Write-Verbose "[BEGIN  ] Getting command metadata for $command"
     $gcm = Get-Command -Name $command -ErrorAction Stop
     #allow an alias or command name
     if ($gcm.CommandType -eq 'Alias') {
@@ -88,7 +90,7 @@ Try {
     else {
         $cmdName = $gcm.Name
     }
-    Write-Verbose "Resolved to $cmdName"
+    Write-Verbose "[BEGIN  ] Resolved command to $cmdName"
     $cmd = New-Object System.Management.Automation.CommandMetaData $gcm
 }
 Catch {
@@ -111,7 +113,7 @@ $myComment = @"
 <#
 This is a copy of:
 
-$(($gcm | format-table -AutoSize | out-string).trim())
+$(($gcm | Format-Table -AutoSize | Out-String).trim())
 
 Created: $('{0:dd} {0:y}' -f (get-date))
 Author : $env:username
@@ -141,12 +143,12 @@ Function $Name {
 #manually copy parameters from original command if param block not found
 #this can happen with dynamic parameters like those in the AD cmdlets
 if (-Not [System.Management.Automation.ProxyCommand]::GetParamBlock($gcm)) {
-    Write-Verbose "No param block detected. Looking for dynamic parameters"
+    Write-Verbose "[PROCESS] No param block detected. Looking for dynamic parameters"
     $IncludeDynamic = $True
 }
 
 if ($IncludeDynamic) {
-    Write-Verbose "Adding dynamic parameters"
+    Write-Verbose "[PROCESS] Adding dynamic parameters"
     $params = $gcm.parameters.GetEnumerator() | where { $_.value.IsDynamic}
         foreach ($p in $params) {
         $cmd.Parameters.add($p.key,$p.value)
@@ -156,6 +158,7 @@ if ($IncludeDynamic) {
 if ($UseForwardHelp) {
     #define a regex to pull forward help from a proxy command
     [regex]$rx = "\.ForwardHelp.*\s+\.ForwardHelp.*"
+    Write-Verbose "[PROCESS] Using forwarded help"
     $help = $rx.match([System.Management.Automation.ProxyCommand]::Create($cmd)).Value 
 }
 else {
@@ -170,7 +173,7 @@ else {
     $cmd.HelpUri = $null
 }
 
-    Write-Verbose "Adding Help"
+    Write-Verbose "[PROCESS] Adding Help"
     $Text += @"
 <#
 $help
@@ -184,7 +187,7 @@ $help
     #get parameters
     $NewParameters = [System.Management.Automation.ProxyCommand]::GetParamBlock($cmd)
 
-     Write-Verbose "Cleaning up parameter names"
+     Write-Verbose "[PROCESS] Cleaning up parameter names"
      [regex]$rx= '\]\r\s+\${(?<var>\w+)}'
      #replace the {variable-name} with just variable-name and joined to type name
      $NewParameters = $rx.Replace($NewParameters,']$$${var}')
@@ -204,7 +207,7 @@ Begin {
 
 "@
 
-    Write-Verbose "Adding Begin"
+    Write-Verbose "[PROCESS] Adding Begin block"
 
     if ($AsProxy) {
         $Text += [System.Management.Automation.ProxyCommand]::GetBegin($cmd)
@@ -219,7 +222,7 @@ Process {
 
 "@
 
-    Write-Verbose "Adding Process"
+    Write-Verbose "[PROCESS] Adding Process block"
     if ($AsProxy) {
         $Text += [System.Management.Automation.ProxyCommand]::GetProcess($cmd)
     }
@@ -240,7 +243,7 @@ End {
 
 "@
 
-    Write-Verbose "Adding End"
+    Write-Verbose "[PROCESS] Adding End block"
     If ($AsProxy) {
         $Text += [System.Management.Automation.ProxyCommand]::GetEnd($cmd)
     }
@@ -260,7 +263,7 @@ $Text += @"
     #open in a new ISE tab
     $tab = $psise.CurrentPowerShellTab.Files.Add()
 
-    Write-Verbose "Opening new command in a new ISE tab"
+    Write-Verbose "[END    ] Opening new command in a new ISE tab"
     $tab.editor.InsertText($Text)
 
     #jump to the top
@@ -271,7 +274,7 @@ $Text += @"
       $Text
     }
 }
-Write-Verbose "Ending $($MyInvocation.MyCommand)"
+    Write-Verbose "[END    ] $($MyInvocation.MyCommand)"
 
 }#end Copy-Command
 
