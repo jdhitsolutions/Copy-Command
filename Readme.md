@@ -1,5 +1,4 @@
-﻿Readme Copy-Command
-===================
+﻿#Copy-Command
 
 This command will copy a PowerShell command, typically a cmdlet, including 
 parameters and help to a new user-specified command. You can also specify an 
@@ -18,10 +17,12 @@ your own PowerShell tools based on existing PowerShell commands.
 For best results, run this command in the PowerShell ISE so that the copied 
 command will be opened in a new tab automatically.
 
-#####Examples
-######Copy-Command Get-ADComputer Get-MyADComputer -includedynamic
+    Copy-Command Get-ADComputer Get-MyADComputer -includedynamic
 
-Create a wrapper function for Get-ADComputer called Get-MyADComputer. Due to 
-the way the Active Directory cmdlets are written, most parameters appear to be
-dynamic so you need to include dynamic parameters otherwise there will be no 
-parameters in the final function.
+This example will create a wrapper function for Get-ADComputer called 
+Get-MyADComputer. Due to the way the Active Directory cmdlets are written, 
+most parameters appear to be dynamic so you need to include dynamic parameters 
+otherwise there will be no parameters in the final function.
+
+Note that this PowerShell file is a script and NOT a module. You will need to
+dot source the file in order to load the function into your PowerShell session.
