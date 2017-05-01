@@ -260,14 +260,18 @@ $Text += @"
 } #end function $Name
 "@
     if ($host.Name -match "PowerShell ISE") {
-    #open in a new ISE tab
-    $tab = $psise.CurrentPowerShellTab.Files.Add()
+        #open in a new ISE tab
+        $tab = $psise.CurrentPowerShellTab.Files.Add()
 
-    Write-Verbose "[END    ] Opening new command in a new ISE tab"
-    $tab.editor.InsertText($Text)
+        Write-Verbose "[END    ] Opening new command in a new ISE tab"
+        $tab.editor.InsertText($Text)
 
-    #jump to the top
-    $tab.Editor.SetCaretPosition(1,1)
+        #jump to the top
+        $tab.Editor.SetCaretPosition(1,1)
+    }
+    elseif ($host.name -eq 'Visual Studio Code Host') {
+        Set-Clipboard $text
+        $psEditor.Window.ShowInformationMessage("Use Ctrl+N to open a new file and Ctrl-V to paste the new code.")
     }
     else {
       #just write the new command to the pipeline
@@ -279,3 +283,5 @@ $Text += @"
 }#end Copy-Command
 
 Set-Alias -Name cc -Value Copy-Command
+
+Export-modulemember -Function Copy-Command -Alias cc
