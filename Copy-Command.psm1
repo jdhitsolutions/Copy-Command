@@ -1,15 +1,96 @@
 ﻿#requires -version 4.0
 
-<#
-copy a PowerShell command including parameters and help to 
-turn it into a wrapper or a proxy function
+Function Get-CommandParameter {
+    [cmdletbinding()]
+    Param(
+        [Parameter(ValueFromPipeline,Mandatory,HelpMessage="Enter the name of a command")]
+        [ValidateNotNullOrEmpty()]
+        [ValidateScript({Get-Command $_})]
+        [string]$Name,
+        [string[]]$ParameterName
+    )
+    Begin {
+        Write-Verbose "[$((Get-Date).TimeofDay) BEGIN  ] Starting $($myinvocation.mycommand)"
+        $common = "Verbose","Debug","erroraction","warningaction",
+        "informationaction","errorvariable","warningvariable","informationvariable",
+        "outvariable","outbuffer","pipelinevariable"
+    } #begin
 
-run this in the PowerShell ISE for best results or Visual Studio Code.
-#>
+    Process {
+        Write-Verbose "[$((Get-Date).TimeofDay) PROCESS] Getting parameter data for $Name "
+        $gcm = Get-Command -Name $name -ErrorAction Stop
+        if ($gcm.CommandType -eq 'alias') {
+            Write-Verbose "[$((Get-Date).TimeofDay) PROCESS] Resolving alias $Name "
+            $gcm = Get-Command -name $gcm.ResolvedCommandName
+        }
+        Write-Verbose "[$((Get-Date).TimeofDay) PROCESS] Getting parameters for $($gcm.name)"
+        $Params = $gcm.parameters
+        
+        Write-Verbose "[$((Get-Date).TimeofDay) PROCESS] Filtering out common parameters"
+        foreach ($var in $common) {
+            $params.Remove($var) | Out-Null
+        }
+
+        $params.keys | foreach-object -Begin {
+            $resolved=@()
+        } -process {
+            $resolved += $gcm.ResolveParameter($_)
+        }
+
+        if ($ParameterName) {
+            foreach ($item in $ParameterName) {
+                $resolved.where({$_.name -like $item})
+            }
+        }
+        else {
+            $resolved
+        }
+    } #process
+
+    End {
+        Write-Verbose "[$((Get-Date).TimeofDay) END    ] Ending $($myinvocation.mycommand)"
+
+    } #end 
+
+} #close Get-CommandMetadata
+
+
+Function Get-CommandMetadata {
+    [cmdletbinding()]
+    Param(
+        [Parameter(ValueFromPipeline,Mandatory,HelpMessage="Enter the name of a command")]
+        [ValidateNotNullOrEmpty()]
+        [ValidateScript({Get-Command $_})]
+        [string]$Name
+    )
+    Begin {
+        Write-Verbose "[$((Get-Date).TimeofDay) BEGIN  ] Starting $($myinvocation.mycommand)"
+
+    } #begin
+
+    Process {
+        Write-Verbose "[$((Get-Date).TimeofDay) PROCESS] Getting command metadata for $Name "
+        $gcm = Get-Command -Name $name -ErrorAction Stop
+        #allow an alias or command name
+        if ($gcm.CommandType -eq 'Alias') {
+            $cmdName = $gcm.ResolvedCommandName
+        }
+        else {
+            $cmdName = $gcm.Name
+        }
+        
+        New-Object System.Management.Automation.CommandMetaData $gcm
+    } #process
+
+    End {
+        Write-Verbose "[$((Get-Date).TimeofDay) END    ] Ending $($myinvocation.mycommand)"
+
+    } #end 
+
+} #close Get-CommandMetadata
+
 
 Function Copy-Command {
-
-
 
 [cmdletbinding()]
 Param(
@@ -23,7 +104,6 @@ Param(
 [switch]$AsProxy,
 [switch]$UseForwardHelp
 )
-
 
 Try {
     Write-Verbose "[BEGIN  ] Starting: $($MyInvocation.Mycommand)"
@@ -147,8 +227,8 @@ $NewParameters
 
 Begin {
 
-    Write-Verbose "Starting `$(`$MyInvocation.Mycommand)"
-    Write-Verbose "Using parameter set `$(`$PSCmdlet.ParameterSetName)"
+    Write-Verbose "[BEGIN  ] Starting `$(`$MyInvocation.Mycommand)"
+    Write-Verbose "[BEGIN  ] Using parameter set `$(`$PSCmdlet.ParameterSetName)"
     Write-Verbose (`$PSBoundParameters | Out-String)
 
 "@
@@ -185,7 +265,7 @@ Process {
 
 End {
    
-    Write-Verbose "Ending `$(`$MyInvocation.Mycommand)"
+    Write-Verbose "[END    ] Ending `$(`$MyInvocation.Mycommand)"
 
 "@
 
@@ -220,8 +300,8 @@ $Text += @"
         $psEditor.Window.ShowInformationMessage("Use Ctrl+N to open a new file and Ctrl-V to paste the new code.")
     }
     else {
-      #just write the new command to the pipeline
-      $Text
+        #just write the new command to the pipeline
+        $Text
     }
 }
     Write-Verbose "[END    ] $($MyInvocation.MyCommand)"
@@ -230,4 +310,4 @@ $Text += @"
 
 Set-Alias -Name cc -Value Copy-Command
 
-Export-modulemember -Function Copy-Command -Alias cc
+Export-modulemember -Function Copy-Command,Get-CommandMetaData,Get-CommandParameter -Alias cc

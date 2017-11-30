@@ -1,5 +1,9 @@
 # Copy-Command
 
+## Archived
+The code in this project has been moved to [PSScriptTools](https://github.com/jdhitsolutions/PSScriptTools). This repository has been archived.
+
+## Original README
 This command will copy a PowerShell command, typically a cmdlet, including parameters and help to a new user-specified command. You can also specify an alias in place of the actual command name.
 
 You can use this *copied* command to create a "wrapper" function or to easily create a proxy function. The default behavior is to create a copy of the command complete with the original comment-based help block.  
